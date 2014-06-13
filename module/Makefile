@@ -1,8 +1,12 @@
+MODULE_NAME = choice_module
+KDIR = "/lib/modules/$(shell uname -r)/build"
 
-obj-m += choice_module.o
+obj-m += $(MODULE_NAME).o
+$(MODULE_NAME)-y := sys_dir/init.o
+
 
 all:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+	make -C $(KDIR) M=$(PWD) modules
 
 clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	make -C $(KDIR) M=$(PWD) clean
