@@ -37,7 +37,7 @@ static int sys_dir_open(struct inode *inode, struct file *file)
     return single_open(file, sys_dir_show, NULL);
 }
 
-static int __init sys_dir_init(void)
+int sys_dir_init(void)
 {
     choice_file = proc_create("choice_module", 0, NULL, &choice_fops);
 
@@ -48,10 +48,7 @@ static int __init sys_dir_init(void)
     return 0;
 }
 
-static void __exit sys_dir_exit(void)
+void  sys_dir_exit(void)
 {
     remove_proc_entry("choice_module", NULL);
 }
-
-module_init(sys_dir_init);
-module_exit(sys_dir_exit);

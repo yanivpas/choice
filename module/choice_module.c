@@ -13,7 +13,9 @@ static int choice_init(void)
 }
 
 static void choice_exit(void)
-{}
+{
+    sys_dir_exit();
+}
 
 module_init(choice_init);
 module_exit(choice_exit);
