@@ -12,8 +12,8 @@ static int choice_init(void)
     return 0;
 }
 
-static void choice_cleanup(void)
+static void choice_exit(void)
 {}
 
 module_init(choice_init);
-module_exit(choice_cleanup);
+module_exit(choice_exit);
