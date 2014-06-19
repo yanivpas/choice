@@ -12,7 +12,7 @@
 
 - User Space Development:
  - [ ] Basic sample programs for testing
-  - [ ] For loop to exhaust cpu.
+  - [*] For loop to exhaust cpu.
   - [ ] For loop with sleep.
   - [ ] Sleep(20s).
   - [ ] Read constant of 1KB from /dev/rand.
