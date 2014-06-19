@@ -7,8 +7,10 @@
  - [ ] Know kernel's conventions
 
 - Kernel Module Development:
+- [ ] Create a direcotry in the /proc/sys
+- [ ] Impliment Socket takeover.
 
-- User Module Development:
+- User Space Development:
  - [ ] Basic sample programs for testing
   - [ ] For loop to exhaust cpu.
   - [ ] For loop with sleep.
