@@ -1,9 +1,8 @@
-MODULE_NAME = choice_module
+MODULE_NAME = choice
 KDIR = "/lib/modules/$(shell uname -r)/build"
 
 obj-m += $(MODULE_NAME).o
-$(MODULE_NAME)-y := streamer.o
-$(MODULE_NAME)-y += sys_dir/init.o
+$(MODULE_NAME)-objs := choice_module.o streamer.o sys_dir/init.o
 
 
 all:
