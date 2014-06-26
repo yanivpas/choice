@@ -3,11 +3,10 @@
 #include <linux/init.h>
 #include "sys_dir/sys_dir.h"
 
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Ohad");
 
 static int choice_init(void)
 {
+    printk(KERN_NOTICE"Choice is loaded\n");
     (void)sys_dir_init();
     return 0;
 }
@@ -19,3 +18,6 @@ static void choice_exit(void)
 
 module_init(choice_init);
 module_exit(choice_exit);
+
+MODULE_AUTHOR("Ohad");
+MODULE_LICENSE("GPL");
