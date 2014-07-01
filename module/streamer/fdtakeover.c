@@ -2,7 +2,10 @@
 #include <linux/syscalls.h>
 #include <linux/fs.h>
 #include <linux/kernel.h>
+#include <linux/net.h>
 
+/* TODO: change the return value to status in all the functions */
+/* TODO: Add a documentation to all functions */
 int takeover(unsigned int fd, struct file **filp)
 {
     int retval = 0;
@@ -17,4 +20,27 @@ int takeover(unsigned int fd, struct file **filp)
 
 exit:
     return retval;
+}
+
+int takeover_free(struct file *filp)
+{
+    /* TODO: */
+    return 0;
+}
+
+int takeover_socket(unsigned int fd, struct socket **sock)
+{
+    int retval = 0;
+    struct file *filp = NULL;
+
+    retval = takeover(fd, &filp);
+    *sock = sock_from_file(filp, &retval);
+    
+    return retval;
+}
+
+int takeover_socket_free(struct socket *sock)
+{
+    /* TODO */
+    return 0;
 }
