@@ -22,10 +22,10 @@ exit:
     return retval;
 }
 
-int takeover_free(struct file *filp)
+void takeover_free(struct file *filp)
 {
-    /* TODO: */
-    return 0;
+    /* FIXME: should we use this? */
+    put_filp(filp);
 }
 
 int takeover_socket(unsigned int fd, struct socket **sock)
@@ -39,8 +39,7 @@ int takeover_socket(unsigned int fd, struct socket **sock)
     return retval;
 }
 
-int takeover_socket_free(struct socket *sock)
+void takeover_socket_free(struct socket *sock)
 {
     /* TODO */
-    return 0;
 }
