@@ -1,5 +1,7 @@
 #include <linux/kernel.h>
 
+/* TODO set global */
+#define DEBUG 1
 #ifdef DEBUG
 #define SET_STATUS(status, value) {     \
 status = value;                         \
@@ -35,6 +37,7 @@ typedef enum {
     CHC_INIT
 } chc_status_t;
 
+#ifdef DEBUG
 void prints(chc_status_t status, char * file, int line)
 {
     char * string = NULL;
@@ -76,5 +79,6 @@ void prints(chc_status_t status, char * file, int line)
         string = CHC_UNKNOWN_STRING;
     }
 
-    printk(KERN_ERR ";%s;%d: %s\n", file, line, string);
+    printk(KERN_ERR "%s;%d: %s\n", file, line, string);
 }
+#endif

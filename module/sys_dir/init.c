@@ -74,15 +74,14 @@ static ssize_t sys_dir_write(struct file *file, const char *buf, size_t count, l
 
     printk("%d\n", parsed_fd);
 
-    /* TODO: add connection and vfree at exit
-     * new_connection = (struct connection *)vzalloc(sizeof(*new_connection));
-     * if (NULL != new_connection) {
-     *     SET_STATUS(status, CHC_SYD_VZALLOC);
-     *     goto cleanup;
-     * }
+    new_connection = (struct connection *)vzalloc(sizeof(*new_connection));
+    if (NULL != new_connection) {
+        SET_STATUS(status, CHC_SYD_VZALLOC);
+        goto cleanup;
+    }
+    new_connection->fd = parsed_fd;
 
-     * connections_list.
-     */
+    list_add(&(new_connection->list), &connections_list);
 
 cleanup:
     if (CHC_SUCCESS != status) {
@@ -120,6 +119,7 @@ int sys_dir_init(void)
     chc_status_t status = CHC_INIT;
     struct proc_dir_entry *pid_entry;
 
+    SET_STATUS(status, CHC_SUCCESS);
     sys_dir_root = proc_mkdir(SYD_ROOT_PATH, 0);
     if (!sys_dir_root) {
         SET_STATUS(status, CHC_SYD_PROC_MKDIR);
@@ -145,12 +145,12 @@ cleanup:
 
 void sys_dir_exit(void)
 {
-    /* struct list_head *position = NULL;
-     *
-     * list_for_each(position, &connections_list) {
-     *     position
-     * }
-     */
+    struct connection *position = NULL;
+    
+    list_for_each_entry(position, &connections_list, list) {
+        list_del(&(position->list));
+        vfree(position);
+    }
 
     proc_remove(sys_dir_root);
 }
