@@ -53,6 +53,7 @@ static chc_status_t sys_dir_parse_fd(
         goto cleanup;
     }
 
+    SET_STATUS(status, CHC_SUCCESS);
 cleanup:
     if (CHC_SUCCESS == status) {
         *fd = (unsigned long) local_fd;
@@ -72,10 +73,8 @@ static ssize_t sys_dir_write(struct file *file, const char *buf, size_t count, l
         goto cleanup;
     }
 
-    printk("%d\n", parsed_fd);
-
     new_connection = (struct connection *)vzalloc(sizeof(*new_connection));
-    if (NULL != new_connection) {
+    if (NULL == new_connection) {
         SET_STATUS(status, CHC_SYD_VZALLOC);
         goto cleanup;
     }
@@ -83,6 +82,7 @@ static ssize_t sys_dir_write(struct file *file, const char *buf, size_t count, l
 
     list_add(&(new_connection->list), &connections_list);
 
+    SET_STATUS(status, CHC_SUCCESS);
 cleanup:
     if (CHC_SUCCESS != status) {
         if (NULL != new_connection) {
@@ -119,7 +119,6 @@ int sys_dir_init(void)
     chc_status_t status = CHC_INIT;
     struct proc_dir_entry *pid_entry;
 
-    SET_STATUS(status, CHC_SUCCESS);
     sys_dir_root = proc_mkdir(SYD_ROOT_PATH, 0);
     if (!sys_dir_root) {
         SET_STATUS(status, CHC_SYD_PROC_MKDIR);
@@ -138,7 +137,7 @@ int sys_dir_init(void)
         goto cleanup;
     }
 
-    status = CHC_SUCCESS;
+    SET_STATUS(status, CHC_SUCCESS);
 cleanup:
     return status;
 }
