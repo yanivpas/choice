@@ -3,6 +3,7 @@
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/net.h>
+/* #include <linux/net/socket.h> */
 
 /* TODO: change the return value to status in all the functions */
 /* TODO: Add a documentation to all functions */
@@ -42,4 +43,5 @@ int takeover_socket(unsigned int fd, struct socket **sock)
 void takeover_socket_free(struct socket *sock)
 {
     /* TODO */
+    sock_release(sock);
 }
