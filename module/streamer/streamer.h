@@ -1,3 +1,4 @@
+#include <linux/net.h>
 
 int takeover(unsigned int fd, struct file **filp);
 void takeover_free(struct file *filp);
