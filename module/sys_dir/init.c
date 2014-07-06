@@ -29,7 +29,7 @@ static chc_status_t sys_dir_parse_fd(
         size_t ustring_size,
         unsigned int *fd)
 {
-    chc_status_t status = CHC_INIT;
+    STATUS_INIT(status);
     /* adding 1 to promise null termination */
     char kstring[SYD_USTRING_SIZE + 1] = {0};
     unsigned long uncopied_bytes = 0;
@@ -37,23 +37,23 @@ static chc_status_t sys_dir_parse_fd(
     unsigned long local_fd = 0;
 
     if (SYD_USTRING_SIZE < ustring_size) {
-        SET_STATUS(status, CHC_SYD_OVERFLOW);
+        STATUS_SET(status, CHC_SYD_OVERFLOW);
         goto cleanup;
     }
 
     uncopied_bytes = copy_from_user(kstring, ustring, ustring_size);
     if (0 != uncopied_bytes) {
-        SET_STATUS(status, CHC_SYD_COPY_FROM_USER);
+        STATUS_SET(status, CHC_SYD_COPY_FROM_USER);
         goto cleanup;
     }
 
     parse_return_code = kstrtoul(kstring, SYD_FD_BASE, &local_fd);
     if (0 != parse_return_code) {
-        SET_STATUS(status, CHC_SYD_KSTRTOUL);
+        STATUS_SET(status, CHC_SYD_KSTRTOUL);
         goto cleanup;
     }
 
-    SET_STATUS(status, CHC_SUCCESS);
+    STATUS_SET(status, CHC_SUCCESS);
 cleanup:
     if (CHC_SUCCESS == status) {
         *fd = (unsigned long) local_fd;
@@ -64,7 +64,7 @@ cleanup:
 
 static ssize_t sys_dir_write(struct file *file, const char *buf, size_t count, loff_t *pos)
 {
-    chc_status_t status = CHC_INIT;
+    STATUS_INIT(status);
     unsigned int parsed_fd = 0;
     struct connection *new_connection = NULL;
 
@@ -75,14 +75,14 @@ static ssize_t sys_dir_write(struct file *file, const char *buf, size_t count, l
 
     new_connection = (struct connection *)vzalloc(sizeof(*new_connection));
     if (NULL == new_connection) {
-        SET_STATUS(status, CHC_SYD_VZALLOC);
+        STATUS_SET(status, CHC_SYD_VZALLOC);
         goto cleanup;
     }
     new_connection->fd = parsed_fd;
 
     list_add(&(new_connection->list), &connections_list);
 
-    SET_STATUS(status, CHC_SUCCESS);
+    STATUS_SET(status, CHC_SUCCESS);
 cleanup:
     if (CHC_SUCCESS != status) {
         if (NULL != new_connection) {
@@ -116,12 +116,12 @@ static const struct file_operations sys_dir_fops = {
 /*** public functions ***/
 int sys_dir_init(void)
 {
-    chc_status_t status = CHC_INIT;
+    STATUS_INIT(status);
     struct proc_dir_entry *pid_entry;
 
     sys_dir_root = proc_mkdir(SYD_ROOT_PATH, 0);
     if (!sys_dir_root) {
-        SET_STATUS(status, CHC_SYD_PROC_MKDIR);
+        STATUS_SET(status, CHC_SYD_PROC_MKDIR);
         goto cleanup;
     }
 
@@ -133,11 +133,11 @@ int sys_dir_init(void)
         /* TODO understand 'data' parameter, now it's magic... */
         (void *)SYD_MAGIC);
     if (!pid_entry) {
-        SET_STATUS(status, CHC_SYD_PROC_CREATE_DATA);
+        STATUS_SET(status, CHC_SYD_PROC_CREATE_DATA);
         goto cleanup;
     }
 
-    SET_STATUS(status, CHC_SUCCESS);
+    STATUS_SET(status, CHC_SUCCESS);
 cleanup:
     return status;
 }
