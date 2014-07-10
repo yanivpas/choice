@@ -145,8 +145,9 @@ cleanup:
 void sys_dir_exit(void)
 {
     struct connection *position = NULL;
+    struct connection *tmp = NULL;
     
-    list_for_each_entry(position, &connections_list, list) {
+    list_for_each_entry_safe(position, tmp, &connections_list, list) {
         list_del(&(position->list));
         vfree(position);
     }
