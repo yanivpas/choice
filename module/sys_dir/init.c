@@ -1,33 +1,95 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
-
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/list.h>
+#include <linux/vmalloc.h>
+#include <asm/uaccess.h>
 
-/*** defines ***/
-#define SYS_DIR_ROOT_PATH "choice"
-#define SYS_DIR_PID_PATH "pid"
-#define SYS_DIR_MAGIC 0x1
+#include "../status.h"
+#include "../streamer/streamer.h"
 
-/*** enums ***/
-typedef enum {
-    SYS_DIR_STATUS_SUCCESS = 0,
+#define SYD_ROOT_PATH "choice"
+#define SYD_PID_PATH "pid"
+#define SYD_MAGIC 0x1
+#define SYD_USTRING_SIZE 8
+#define SYD_FD_BASE 10
 
-    SYS_DIR_STATUS_PROC_MKDIR_FAILED,
-    SYS_DIR_STATUS_PROC_CREATE_DATA_FAILED,
-    
-    SYS_DIR_STATUS_INIT
-} sys_dir_status_t;
-
-/*** structs ***/
-// TODO define golbal struct to hold data like this
+/* TODO define golbal struct to hold data like this */
 static struct proc_dir_entry* sys_dir_root;
+struct connection {
+    unsigned int fd;
+    struct list_head list;
+};
+static LIST_HEAD(connections_list);
 
-/*** private functions ***/
+static chc_status_t sys_dir_parse_fd(
+        const char *ustring,
+        size_t ustring_size,
+        unsigned int *fd)
+{
+    STATUS_INIT(status);
+    /* adding 1 to promise null termination */
+    char kstring[SYD_USTRING_SIZE + 1] = {0};
+    unsigned long uncopied_bytes = 0;
+    int parse_return_code = 0;
+    unsigned long local_fd = 0;
+
+    if (SYD_USTRING_SIZE < ustring_size) {
+        STATUS_SET(status, CHC_SYD_OVERFLOW);
+        goto cleanup;
+    }
+
+    uncopied_bytes = copy_from_user(kstring, ustring, ustring_size);
+    if (0 != uncopied_bytes) {
+        STATUS_SET(status, CHC_SYD_COPY_FROM_USER);
+        goto cleanup;
+    }
+
+    parse_return_code = kstrtoul(kstring, SYD_FD_BASE, &local_fd);
+    if (0 != parse_return_code) {
+        STATUS_SET(status, CHC_SYD_KSTRTOUL);
+        goto cleanup;
+    }
+
+    STATUS_SET(status, CHC_SUCCESS);
+cleanup:
+    if (CHC_SUCCESS == status) {
+        *fd = (unsigned long) local_fd;
+    }
+
+    return status;
+}
+
 static ssize_t sys_dir_write(struct file *file, const char *buf, size_t count, loff_t *pos)
 {
-    //TODO
+    STATUS_INIT(status);
+    unsigned int parsed_fd = 0;
+    struct connection *new_connection = NULL;
+
+    status = sys_dir_parse_fd(buf, count, &parsed_fd);
+    if (CHC_SUCCESS != status) {
+        goto cleanup;
+    }
+
+    new_connection = (struct connection *)vzalloc(sizeof(*new_connection));
+    if (NULL == new_connection) {
+        STATUS_SET(status, CHC_SYD_VZALLOC);
+        goto cleanup;
+    }
+    new_connection->fd = parsed_fd;
+
+    list_add(&(new_connection->list), &connections_list);
+
+    STATUS_SET(status, CHC_SUCCESS);
+cleanup:
+    if (CHC_SUCCESS != status) {
+        if (NULL != new_connection) {
+            vfree(new_connection);
+        }
+    }
+
     return count;
 }
 
@@ -51,39 +113,44 @@ static const struct file_operations sys_dir_fops = {
     .release = single_release,
 };
 
-//TODO get pid of calling process (task_tgid_vnr from include/linux/sched.h)
-//FIXME we might want to use pid_nr from include/linux/pid.h
-
 /*** public functions ***/
 int sys_dir_init(void)
 {
-    sys_dir_status_t status = SYS_DIR_STATUS_INIT;
+    STATUS_INIT(status);
     struct proc_dir_entry *pid_entry;
 
-    sys_dir_root = proc_mkdir(SYS_DIR_ROOT_PATH, 0);
+    sys_dir_root = proc_mkdir(SYD_ROOT_PATH, 0);
     if (!sys_dir_root) {
-        status = SYS_DIR_STATUS_PROC_MKDIR_FAILED;
+        STATUS_SET(status, CHC_SYD_PROC_MKDIR);
         goto cleanup;
     }
 
     pid_entry = proc_create_data(
-        SYS_DIR_PID_PATH,
+        SYD_PID_PATH,
         S_IRUGO|S_IWUSR,
         sys_dir_root,
         &sys_dir_fops,
-        //TODO understand 'data' parameter, now it's magic...
-        (void *)SYS_DIR_MAGIC);
+        /* TODO understand 'data' parameter, now it's magic... */
+        (void *)SYD_MAGIC);
     if (!pid_entry) {
-        status = SYS_DIR_STATUS_PROC_CREATE_DATA_FAILED;
+        STATUS_SET(status, CHC_SYD_PROC_CREATE_DATA);
         goto cleanup;
     }
 
-    status = SYS_DIR_STATUS_SUCCESS;
+    STATUS_SET(status, CHC_SUCCESS);
 cleanup:
     return status;
 }
 
 void sys_dir_exit(void)
 {
+    struct connection *position = NULL;
+    struct connection *tmp = NULL;
+    
+    list_for_each_entry_safe(position, tmp, &connections_list, list) {
+        list_del(&(position->list));
+        vfree(position);
+    }
+
     proc_remove(sys_dir_root);
 }
