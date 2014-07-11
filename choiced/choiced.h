@@ -1,7 +1,8 @@
 typedef enum choiced_status_e {
 	CHOICE_SUCCESS = 0,
 	CHOICE_FORK_FAILED,
-	CHOICE_PIPE_FAILED
+	CHOICE_PIPE_FAILED,
+    CHOICE_SETSID_FAILD
 } choiced_status_t;
 
 typedef enum pipe_indexes_e {

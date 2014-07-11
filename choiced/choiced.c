@@ -38,14 +38,22 @@ choiced_status_t _father_process(int pipe_fds[], pid_t pid)
 choiced_status_t _child_process(int pipe_fds[])
 {
 	choiced_status_t status = CHOICE_SUCCESS;
-	pid_t pid = 0;
+	pid_t pid = -1;
+    pid_t sid = -1;
 
 	read(pipe_fds[PIPE_READ], (void *)&pid, sizeof(pid));
 
 	CLOSE_PIPE_BOTHWAY(pipe_fds)
 
+    sid = setsid();
+    if (0 > sid) {
+        status = CHOICE_SETSID_FAILD;
+        goto l_cleanup;
+    }
+
 	status = _daemon_main(pipe_fds, pid);
 
+l_cleanup:
 	return status;
 }
 
