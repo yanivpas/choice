@@ -26,6 +26,7 @@ exit:
 void takeover_free(struct file *filp)
 {
     /* FIXME: should we use this? */
+    fput(filp);
 }
 
 int takeover_socket(unsigned int fd, struct socket **sock)
