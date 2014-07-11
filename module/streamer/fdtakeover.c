@@ -3,24 +3,39 @@
 #include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/net.h>
-/* #include <linux/net/socket.h> */
+
+#include "status.h"
 
 /* TODO: change the return value to status in all the functions */
 /* TODO: Add a documentation to all functions */
-int takeover(unsigned int fd, struct file **filp)
+chc_status_t takeover(unsigned int fd, struct file **filp)
 {
-    int retval = 0;
+	STATUS_INIT(status);
+
+	*filp = fget(fd);
+	if (NULL == filp) {
+		STATUS_SET(status, CHC_FTO_FGET);
+		goto l_exit;
+	}
+
+	if (-1 == sys_close(fd)) {
+		STATUS_SET(status, CHC_FTO_CLOSE);
+		goto l_exit;
+	}
+
+l_exit:
+	return status;
+}
+
+chc_status_t takeover_socket(unsigned int fd, struct socket **sock)
+{
+	STATUS_INIT(status);
+    struct file *filp = NULL;
+
+    STATUS_SET(status, takeover(fd, &filp));
+    *sock = sock_from_file(filp, &status);
     
-    *filp = fget(fd);
-    if (NULL == filp) {
-        retval = -1;
-        goto exit;
-    }
-
-    retval = sys_close(fd);
-
-exit:
-    return retval;
+    return status;
 }
 
 void takeover_free(struct file *filp)
@@ -29,19 +44,7 @@ void takeover_free(struct file *filp)
     fput(filp);
 }
 
-int takeover_socket(unsigned int fd, struct socket **sock)
-{
-    int retval = 0;
-    struct file *filp = NULL;
-
-    retval = takeover(fd, &filp);
-    *sock = sock_from_file(filp, &retval);
-    
-    return retval;
-}
-
 void takeover_socket_free(struct socket *sock)
 {
-    /* TODO */
     sock_release(sock);
 }
