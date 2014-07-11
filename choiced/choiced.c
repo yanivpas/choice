@@ -66,9 +66,9 @@ int main(int argc, char * argv[])
 	choiced_status_t result = CHOICE_SUCCESS;
 	int pipe_fds[2] = {-1};
 
-    if (7 == argc) {
-        printf("I am a leet not a 1337\n");
-    }
+	if (7 == argc) {
+		printf("I am a leet not a 1337\n");
+	}
 
 	if (-1 == pipe(pipe_fds)) {
 		result = CHOICE_PIPE_FAILED;
@@ -76,7 +76,7 @@ int main(int argc, char * argv[])
 	}
 
 	result = fork_me(pipe_fds);
-	
+
 l_cleanup:
-    return result;
+	return result;
 }
