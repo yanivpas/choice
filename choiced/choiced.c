@@ -1,13 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <syslog.h>
 
 #include "choiced.h"
+
+#define PRINT(x) syslog(LOG_INFO, x)
 
 choiced_status_t _daemon_main(int pipe_fds[], pid_t pid)
 {
 	choiced_status_t status = CHOICE_SUCCESS;
-	while (1) {
+
+    openlog("choiced", 0, LOG_USER);
+    PRINT("I am alive!!!");
+
+	for (;;) {
 		sleep(60);
 	}
 	return status;
