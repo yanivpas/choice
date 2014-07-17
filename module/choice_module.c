@@ -7,13 +7,13 @@
 static int choice_init(void)
 {
     printk(KERN_NOTICE"Choice is loaded\n");
-    (void)sys_dir_init();
+    (void)syd_init();
     return 0;
 }
 
 static void choice_exit(void)
 {
-    sys_dir_exit();
+    syd_exit();
 }
 
 module_init(choice_init);
