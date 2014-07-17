@@ -33,8 +33,11 @@ prints(status, value##_STRING, __FILE__, __LINE__);     \
 
 #define CHC_INIT_STRING "init value"
 #define CHC_UNKNOWN_STRING "unknown status value"
+
 #define CHC_FTO_FGET_STRING "fget failed"
 #define CHC_FTO_CLOSE_STRING "close failed"
+
+#define CHC_DIP_VZALLOC_STRING "vzalloc"
 
 typedef enum {
     CHC_SUCCESS = 0,
@@ -51,6 +54,8 @@ typedef enum {
 
 	CHC_FTO_FGET,
 	CHC_FTO_CLOSE,
+
+    CHC_DIP_VZALLOC,
 
     CHC_INIT
 } chc_status_t;
