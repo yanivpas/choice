@@ -3,7 +3,7 @@
 #include "../status.h"
 #include "ipc.h"
 
-syd_obj g_syd_ipc = {0};
+struct syd_obj *g_syd_ipc = NULL;
 
 chc_status_t _read_ipc_file(void * context) {
     STATUS_INIT(status);
@@ -12,7 +12,7 @@ chc_status_t _read_ipc_file(void * context) {
 
 chc_status_t _write_ipc_file(
         void *context,
-        char *buffer,
+        const char *buffer,
         size_t buffer_size) {
 
     STATUS_INIT(status);
@@ -21,18 +21,19 @@ chc_status_t _write_ipc_file(
 
 int ipc_init(void) {
     STATUS_INIT(status);
+    /* TODO: vzalloc g_syd_ipc */
 
-    g_syd_ipc.context = NULL;
+    g_syd_ipc->context = NULL;
 
-    g_syd_ipc.name = (char *)vzalloc(sizeof(DAEMON_IPC_FILE));
+    g_syd_ipc->name = (char *)vzalloc(sizeof(DAEMON_IPC_FILE));
     if (NULL == g_syd_ipc) {
         STATUS_LABEL(status, CHC_DIP_VZALLOC);
         goto l_exit;
     }
-    memcpy(g_syd_ipc.name, DAEMON_IPC_FILE, sizeof(DAEMON_IPC_FILE));
+    memcpy(g_syd_ipc->name, DAEMON_IPC_FILE, sizeof(DAEMON_IPC_FILE));
 
-    g_syd_ipc.ops.read = _read_ipc_file;
-    g_syd_ipc.ops.write = _write_ipc_file;
+    g_syd_ipc->ops->read = _read_ipc_file;
+    g_syd_ipc->ops->write = _write_ipc_file;
 
 l_exit:
     return (int) status;

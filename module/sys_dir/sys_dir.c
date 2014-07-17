@@ -8,9 +8,11 @@
 #include <linux/string.h>
 #include <asm/uaccess.h>
 
+#include "sys_dir.h"
 #include "../status.h"
 #include "../streamer/streamer.h"
 
+#define SYD_MAGIC (0x10)
 #define SYD_ROOT_PATH "choice"
 
 /* TODO define golbal struct to hold data like this */
@@ -25,8 +27,8 @@ static LIST_HEAD(syd_entries);
 chc_status_t syd_get_obj(struct file *file, struct syd_obj **obj)
 {
     STATUS_INIT(status);
-    syd_obj local_obj = {0};
     char *name = NULL;
+    struct syd_obj *local_obj = NULL;
     struct syd_entry *position = NULL;
 
     /* TODO: change comparison to some pointer. inode if possible */
@@ -57,10 +59,10 @@ cleanup:
 static int syd_show(struct seq_file *file, void *p)
 {
     STATUS_INIT(status);
-    syd_obj *obj = NULL;
+    struct syd_obj *obj = NULL;
 
     seq_printf(file, "choice modulce is alive! cmf\n");
-    obj = file->private_data;
+    obj = file->private;
 
     STATUS_ASSIGN(status, obj->ops->read(obj->context));
     if (STATUS_IS_ERROR(status)) {
@@ -79,12 +81,12 @@ cleanup:
 static int syd_open(struct inode *inode, struct file *file)
 {
     STATUS_INIT(status);
-    syd_obj *obj = NULL;
+    struct syd_obj *obj = NULL;
 
     STATUS_ASSIGN(status, syd_get_obj(file, &obj));
 
     STATUS_LABEL(status, CHC_SUCCESS);
-cleanup:
+
     if (STATUS_IS_ERROR(status)) {
         /* FIXME corrupt retval gracefully */
         return -1;
@@ -95,8 +97,9 @@ cleanup:
 static ssize_t syd_write(struct file *file, const char *buf, size_t count, loff_t *pos)
 {
     STATUS_INIT(status);
+    struct syd_obj *obj = NULL;
 
-    STATUS_ASSIGN(status, syd_get_obj(file));
+    STATUS_ASSIGN(status, syd_get_obj(file, &obj));
     if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
@@ -124,10 +127,9 @@ static const struct file_operations syd_fops = {
     .release = single_release,
 };
 
-chc_status_t syd_create(struct syd_obj obj)
+chc_status_t syd_create(struct syd_obj *obj)
 {
     STATUS_INIT(status);
-    struct file_operations fops = {0};
     struct syd_entry *new_entry = NULL;
     struct proc_dir_entry *pid_entry;
 
@@ -155,7 +157,7 @@ cleanup:
     return status;
 }
 
-chc_status_t syd_init(void)
+int syd_init(void)
 {
     STATUS_INIT(status);
 
@@ -167,7 +169,11 @@ chc_status_t syd_init(void)
 
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
-    return status;
+    if (STATUS_IS_ERROR(status)) {
+        /* FIXME corrupt retval gracefully */
+        return -1;
+    }
+    return 0;
 }
 
 void syd_exit(void)
