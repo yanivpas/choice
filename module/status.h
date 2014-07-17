@@ -15,6 +15,9 @@ prints(status, value##_STRING, __FILE__, __LINE__);     \
 #define STATUS_SET(status, value) status = value
 #endif
 
+#define STATUS_ASSIGN(status, value) status = value
+#define STATUS_IS_ERROR(status) (CHC_SUCCESS != status)
+
 #define CHC_SUCCESS_STRING "success"
 #define CHC_SYD_OVERFLOW_STRING "overflow"
 #define CHC_SYD_PROC_MKDIR_STRING "proc_mkdir"
@@ -24,6 +27,8 @@ prints(status, value##_STRING, __FILE__, __LINE__);     \
 #define CHC_SYD_KSTRTOUL_STRING "kstrtoul"
 #define CHC_INIT_STRING "init value"
 #define CHC_UNKNOWN_STRING "unknown status value"
+#define CHC_FTO_FGET_STRING "fget failed"
+#define CHC_FTO_CLOSE_STRING "close failed"
 
 typedef enum {
     CHC_SUCCESS = 0,
@@ -33,11 +38,13 @@ typedef enum {
     CHC_SYD_VZALLOC,
     CHC_SYD_COPY_FROM_USER,
     CHC_SYD_KSTRTOUL,
+	CHC_FTO_FGET,
+	CHC_FTO_CLOSE,
     CHC_INIT
 } chc_status_t;
 
 #ifdef DEBUG
-void prints(chc_status_t status, char *string, char *file, int line)
+static inline void prints(chc_status_t status, char *string, char *file, int line)
 {
     printk(KERN_ERR "%s;%d: %s\n", file, line, string);
 }
