@@ -14,12 +14,12 @@ chc_status_t takeover(unsigned int fd, struct file **filp)
 
 	*filp = fget(fd);
 	if (NULL == filp) {
-		STATUS_SET(status, CHC_FTO_FGET);
+		STATUS_LABEL(status, CHC_FTO_FGET);
 		goto l_exit;
 	}
 
 	if (-1 == sys_close(fd)) {
-		STATUS_SET(status, CHC_FTO_CLOSE);
+		STATUS_LABEL(status, CHC_FTO_CLOSE);
 		goto l_exit;
 	}
 
@@ -29,12 +29,16 @@ l_exit:
 
 chc_status_t takeover_socket(unsigned int fd, struct socket **sock)
 {
-	STATUS_INIT(status);
+    STATUS_INIT(status);
     struct file *filp = NULL;
+	int retval = 0;
 
-    STATUS_SET(status, takeover(fd, &filp));
-    *sock = sock_from_file(filp, &status);
-    
+    STATUS_ASSIGN(status, takeover(fd, &filp));
+    if (STATUS_IS_ERROR(status)) {
+        retval = -1;
+    }
+    *sock = sock_from_file(filp, &retval);
+
     return status;
 }
 

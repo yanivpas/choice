@@ -52,11 +52,11 @@ chc_status_t syd_get_obj(struct file *file, syd_obj *obj)
     }
 
     if (NULL == local_obj) {
-        STATUS_SET(status, CHC_SYD_FILE_NOT_EXIST);
+        STATUS_LABEL(status, CHC_SYD_FILE_NOT_EXIST);
         goto cleanup;
     }
 
-    STATUS_SET(status, CHC_SUCCESS);
+    STATUS_LABEL(status, CHC_SUCCESS);
     cleanup:
     if (CHC_SUCCESS == status) {
         *obj = local_obj;
@@ -69,12 +69,12 @@ static ssize_t syd_write(struct file *file, const char *buf, size_t count, loff_
 {
     STATUS_INIT(status);
 
-    status = syd_get_obj(file);
+    STATUS_ASSIGN(status, syd_get_obj(file));
     if (CHC_SUCCESS != status) {
         goto cleanup;
     }
 
-    STATUS_SET(status, CHC_SUCCESS);
+    STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
     /* TODO: maybe calculate something? */
     return count;
@@ -103,19 +103,19 @@ chc_status_t syd_create(struct syd_obj obj)
         &syd_fops,
         (void *)SYD_MAGIC);
     if (NULL == pid_entry) {
-        STATUS_SET(status, CHC_SYD_PROC_CREATE_DATA);
+        STATUS_LABEL(status, CHC_SYD_PROC_CREATE_DATA);
         goto cleanup;
     }
 
     new_entry = (struct syd_entry *)vzalloc(sizeof(*new_entry));
     if (NULL == new_entry) {
-        STATUS_SET(status, CHC_SYD_VZALLOC);
+        STATUS_LABEL(status, CHC_SYD_VZALLOC);
         goto cleanup;
     }
     new_entry->obj = obj;
     list_add(&(new_entry->list), &syd_entries);
 
-    STATUS_SET(status, CHC_SUCCESS);
+    STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
     return status;
 }
@@ -126,11 +126,11 @@ chc_status_t syd_init(void)
 
     syd_root = proc_mkdir(SYD_ROOT_PATH, 0);
     if (NULL == syd_root) {
-        STATUS_SET(status, CHC_SYD_PROC_MKDIR);
+        STATUS_LABEL(status, CHC_SYD_PROC_MKDIR);
         goto cleanup;
     }
 
-    STATUS_SET(status, CHC_SUCCESS);
+    STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
     return status;
 }
