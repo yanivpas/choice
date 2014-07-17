@@ -22,10 +22,12 @@ struct connection {
 };
 static LIST_HEAD(connections_list);
 
-static chc_status_t cor_parse_fd(
-        const char *ustring,
-        size_t ustring_size,
-        unsigned int *fd)
+chc_status_t cor_read()
+{
+    return 0;
+}
+
+static chc_status_t cor_parse_fd(const char *ustring, size_t ustring_size, unsigned int *fd)
 {
     STATUS_INIT(status);
     /* adding 1 to guarantee null termination */
@@ -53,22 +55,22 @@ static chc_status_t cor_parse_fd(
 
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
-    if (CHC_SUCCESS == status) {
+    if (STATUS_IS_SUCCESS(status)) {
         *fd = (unsigned long) local_fd;
     }
 
     return status;
 }
 
-static ssize_t cor_write(struct file *file, const char *buffer, size_t buffer_size)
+chc_status_t cor_write(void *context, const char *buffer, size_t buffer_size)
 {
     STATUS_INIT(status);
     unsigned int parsed_fd = 0;
     struct connection *new_connection = NULL;
 
-    /* TODO: takeover fd */
+    /* TODO: takeover fd and create its own file */
     STATUS_ASSIGN(status, cor_parse_fd(buffer, buffer_size, &parsed_fd));
-    if (CHC_SUCCESS != status) {
+    if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
 
@@ -83,13 +85,13 @@ static ssize_t cor_write(struct file *file, const char *buffer, size_t buffer_si
 
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
-    if (CHC_SUCCESS != status) {
+    if (STATUS_IS_ERROR(status)) {
         if (NULL != new_connection) {
             vfree(new_connection);
         }
     }
 
-    return count;
+    return status;
 }
 
 static const struct syd cor_fops = {
@@ -102,7 +104,7 @@ int cor_init(void)
     STATUS_INIT(status);
 
     STATUS_ASSIGN(status, syd_create(COR_PATH, cor_fops));
-    if (CHC_SUCCESS != status) {
+    if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
 

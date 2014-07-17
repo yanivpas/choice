@@ -22,18 +22,7 @@ struct syd_entry {
 };
 static LIST_HEAD(syd_entries);
 
-static int syd_show(struct seq_file *m, void *v)
-{
-    seq_printf(m, "choice modulce is alive! cmf\n");
-    return 0;
-}
-
-static int syd_open(struct inode *inode, struct file *file)
-{
-    return single_open(file, syd_show, NULL);
-}
-
-chc_status_t syd_get_obj(struct file *file, syd_obj *obj)
+chc_status_t syd_get_obj(struct file *file, struct syd_obj **obj)
 {
     STATUS_INIT(status);
     syd_obj local_obj = {0};
@@ -57,12 +46,50 @@ chc_status_t syd_get_obj(struct file *file, syd_obj *obj)
     }
 
     STATUS_LABEL(status, CHC_SUCCESS);
-    cleanup:
-    if (CHC_SUCCESS == status) {
+cleanup:
+    if (STATUS_IS_SUCCESS(status)) {
         *obj = local_obj;
     }
 
     return status;
+}
+
+static int syd_show(struct seq_file *file, void *p)
+{
+    STATUS_INIT(status);
+    syd_obj *obj = NULL;
+
+    seq_printf(file, "choice modulce is alive! cmf\n");
+    obj = file->private_data;
+
+    STATUS_ASSIGN(status, obj->ops->read(obj->context));
+    if (STATUS_IS_ERROR(status)) {
+        goto cleanup;
+    }
+
+    STATUS_LABEL(status, CHC_SUCCESS);
+cleanup:
+    if (STATUS_IS_ERROR(status)) {
+        /* FIXME corrupt retval gracefully */
+        return -1;
+    }
+    return 0;
+}
+
+static int syd_open(struct inode *inode, struct file *file)
+{
+    STATUS_INIT(status);
+    syd_obj *obj = NULL;
+
+    STATUS_ASSIGN(status, syd_get_obj(file, &obj));
+
+    STATUS_LABEL(status, CHC_SUCCESS);
+cleanup:
+    if (STATUS_IS_ERROR(status)) {
+        /* FIXME corrupt retval gracefully */
+        return -1;
+    }
+    return single_open(file, syd_show, obj);
 }
 
 static ssize_t syd_write(struct file *file, const char *buf, size_t count, loff_t *pos)
@@ -70,14 +97,22 @@ static ssize_t syd_write(struct file *file, const char *buf, size_t count, loff_
     STATUS_INIT(status);
 
     STATUS_ASSIGN(status, syd_get_obj(file));
-    if (CHC_SUCCESS != status) {
+    if (STATUS_IS_ERROR(status)) {
+        goto cleanup;
+    }
+
+    STATUS_ASSIGN(status, obj->ops->write(obj->context, buf, count));
+    if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
 
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
-    /* TODO: maybe calculate something? */
-    return count;
+    if (STATUS_IS_ERROR(status)) {
+        /* FIXME corrupt retval gracefully */
+        return -1;
+    }
+    return 0;
 }
 
 static const struct file_operations syd_fops = {

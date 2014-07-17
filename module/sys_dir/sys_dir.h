@@ -1,3 +1,5 @@
+#include "../status.h"
+
 #define SYD_MAX_NAME (10)
 
 struct syd_ops {
@@ -8,8 +10,8 @@ struct syd_ops {
 struct syd_obj {
     void *context;
     char *name;
-    struct *syd_ops;
-}
+    struct syd_ops *ops;
+};
 
 int syd_init(void);
 void syd_exit(void);

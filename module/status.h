@@ -7,23 +7,24 @@
 
 #define STATUS_INIT(status) chc_status_t status = CHC_INIT
 #ifdef DEBUG
-#define STATUS_LABEL(status, value) {                     \
-status = value;                                         \
+#define STATUS_LABEL(status, value) {                   \
+status = (value);                                       \
 prints(status, value##_STRING, __FILE__, __LINE__);     \
 }
 #else
-#define STATUS_LABEL(status, value) status = value
+#define STATUS_LABEL(status, value) status = (value)
 #endif
 
-#define STATUS_ASSIGN(status, value) status = value
-#define STATUS_IS_ERROR(status) (CHC_SUCCESS != status)
+#define STATUS_ASSIGN(status, value) status = (value)
+#define STATUS_IS_SUCCESS(status) (CHC_SUCCESS == status)
+#define STATUS_IS_ERROR(status) (!STATUS_IS_SUCCESS(status))
 
 #define CHC_SUCCESS_STRING "success"
 
 #define CHC_SYD_PROC_MKDIR_STRING "proc_mkdir"
 #define CHC_SYD_VZALLOC_STRING "vzalloc"
 #define CHC_SYD_PROC_CREATE_DATA_STRING "proc_create_data"
-#define CHC_SYD_FILE_NOT_EXIST "no such file"
+#define CHC_SYD_FILE_NOT_EXIST_STRING "no such file"
 
 #define CHC_COR_VZALLOC_STRING "vzalloc"
 #define CHC_COR_COPY_FROM_USER_STRING "copy_from_user"
