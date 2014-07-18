@@ -16,14 +16,14 @@ static struct linux_binfmt spoon_format = {
 };
 
 
-int spoon_init(void)
+int spo_init(void)
 {
     printk(KERN_NOTICE"Choice: spoon is loaded\n");
     register_binfmt(&spoon_format);
     return 0;
 }
 
-void spoon_exit(void)
+void spo_exit(void)
 {
     unregister_binfmt(&spoon_format);
 }
@@ -50,8 +50,8 @@ static int spoon_load_library(struct file *filp)
 	if (memcmp(bprm->buf, SPOON_MAGIC, SSPOON_MAGIC) != 0)
 		goto exit;
 
-    retval = 0; /* SUCCESS */
-exit:
+    retval = 0;  SUCCESS */
+
     return retval;
     
 }

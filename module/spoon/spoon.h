@@ -1,2 +1,2 @@
-int spoon_init(void);
-void spoon_exit(void);
+int spo_init(void);
+void spo_exit(void);
