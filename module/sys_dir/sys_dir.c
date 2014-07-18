@@ -115,7 +115,7 @@ cleanup:
         /* FIXME corrupt retval gracefully */
         return -1;
     }
-    return 0;
+    return count;
 }
 
 static const struct file_operations syd_fops = {
