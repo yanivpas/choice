@@ -15,7 +15,11 @@
 #define COR_USTRING_SIZE (8)
 #define COR_FD_BASE (10)
 
-static struct syd_obj *g_cor_syd = NULL;
+static struct syd_obj g_cor_syd = {
+    .context = NULL,
+    .name = COR_NAME,
+    .ops = NULL,
+};
 
 struct connection {
     unsigned int fd;
@@ -99,17 +103,16 @@ int cor_init(void)
 {
     STATUS_INIT(status);
 
-    g_cor_syd = (struct syd_obj *)vzalloc(sizeof(*g_cor_syd));
-    if (NULL == g_cor_syd) {
-        STATUS_LABEL(status, CHC_COR_VZALLOC);
+    g_cor_syd.ops = (struct syd_ops *)vzalloc(sizeof(*g_cor_syd.ops));
+    if (NULL == g_cor_syd.ops) {
+        STATUS_LABEL(status, CHC_DIP_VZALLOC);
         goto cleanup;
     }
-    g_cor_syd->context = NULL;
-    g_cor_syd->name = COR_NAME;
-    g_cor_syd->ops->read = cor_read;
-    g_cor_syd->ops->write = cor_write;
 
-    STATUS_ASSIGN(status, syd_create(g_cor_syd));
+    g_cor_syd.ops->read = cor_read;
+    g_cor_syd.ops->write = cor_write;
+
+    STATUS_ASSIGN(status, syd_create(&g_cor_syd));
     if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
@@ -129,5 +132,5 @@ void cor_exit(void)
         vfree(position);
     }
 
-    vfree(g_cor_syd);
+    vfree(g_cor_syd.ops);
 }

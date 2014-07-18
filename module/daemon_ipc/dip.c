@@ -3,7 +3,11 @@
 #include "../status.h"
 #include "dip.h"
 
-struct syd_obj *g_syd_ipc = NULL;
+static struct syd_obj g_syd_ipc = {
+    .context = NULL,
+    .name = NULL,
+    .ops = NULL,
+};
 
 chc_status_t _read_ipc_file(void * context)
 {
@@ -27,23 +31,21 @@ chc_status_t _init_syd_ipc(void)
 {
     STATUS_INIT(status);
 
-    g_syd_ipc = (struct syd_obj *)vzalloc(sizeof(*g_syd_ipc));
-    if (NULL == g_syd_ipc) {
+    g_syd_ipc.name = (char *)vzalloc(sizeof(DAEMON_IPC_FILE));
+    if (NULL == g_syd_ipc.name) {
+        STATUS_LABEL(status, CHC_DIP_VZALLOC);
+        goto l_exit;
+    }
+    memcpy(g_syd_ipc.name, DAEMON_IPC_FILE, sizeof(DAEMON_IPC_FILE));
+
+    g_syd_ipc.ops = (struct syd_ops *)vzalloc(sizeof(*g_syd_ipc.ops));
+    if (NULL == g_syd_ipc.ops) {
         STATUS_LABEL(status, CHC_DIP_VZALLOC);
         goto l_exit;
     }
 
-    g_syd_ipc->context = NULL;
-
-    g_syd_ipc->name = (char *)vzalloc(sizeof(DAEMON_IPC_FILE));
-    if (NULL == g_syd_ipc->name) {
-        STATUS_LABEL(status, CHC_DIP_VZALLOC);
-        goto l_exit;
-    }
-    memcpy(g_syd_ipc->name, DAEMON_IPC_FILE, sizeof(DAEMON_IPC_FILE));
-
-    g_syd_ipc->ops->read = _read_ipc_file;
-    g_syd_ipc->ops->write = _write_ipc_file;
+    g_syd_ipc.ops->read = _read_ipc_file;
+    g_syd_ipc.ops->write = _write_ipc_file;
 
 l_exit:
     return status;
@@ -58,7 +60,7 @@ int dip_init(void)
         goto l_exit;
     }
 
-    STATUS_ASSIGN(status, syd_create(g_syd_ipc));
+    STATUS_ASSIGN(status, syd_create(&g_syd_ipc));
     if (STATUS_IS_ERROR(status)) {
         goto l_exit;
     }
@@ -69,6 +71,6 @@ l_exit:
 
 void dip_exit(void)
 {
-    FREE(g_syd_ipc->name);
-    FREE(g_syd_ipc);
+    FREE(g_syd_ipc.name);
+    FREE(g_syd_ipc.ops);
 }
