@@ -2,42 +2,44 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <fcntl.h>
 
-#include "status.h"
+#include "dctl.h"
 #include "daemon.h"
 #include "kernel_ipc.h"
 
 #define PRINT(x) syslog(LOG_INFO, x)
 
-static choiced_status_t _daemon_main(int pipe_fds[], pid_t pid)
+static void _wait(void)
+{
+    for (;;) {
+        sleep(60);
+    }
+}
+
+static choiced_status_t _daemon_main(pid_t pid)
 {
     STATUS_INIT(status);
 
-    openlog("choiced", 0, LOG_USER);
-
     if (!is_choice_running()) {
         PRINT("Choice is not running");
-        goto l_exit;
+        STATUS_LABEL(status, CHOICE_NOT_RUNNING);
+        goto l_cleanup;
     }
 
     PRINT("I am alive!!!");
 
-    for (;;) {
-        sleep(60);
-    }
+    STATUS_ASSIGN(status, write_pid(pid));
 
-l_exit:
+    _wait();
+
+l_cleanup:
     return status;
 }
 
-static choiced_status_t _father_process(int pipe_fds[], pid_t pid)
+static choiced_status_t _father_process(pid_t pid)
 {
     STATUS_INIT(status);
-
-    write(pipe_fds[PIPE_WRITE], (void *)&pid, sizeof(pid));
-    
-    /* Cleaning up before forcefully exiting the process */
-    CLOSE_PIPE_BOTHWAY(pipe_fds);
 
     STATUS_LABEL(status, CHOICE_SUCCESS);
 
@@ -47,15 +49,13 @@ static choiced_status_t _father_process(int pipe_fds[], pid_t pid)
     return status;
 }
 
-static choiced_status_t _child_process(int pipe_fds[])
+static choiced_status_t _child_process(void)
 {
     STATUS_INIT(status);
     pid_t pid = -1;
     pid_t sid = -1;
 
-    read(pipe_fds[PIPE_READ], (void *)&pid, sizeof(pid));
-
-    CLOSE_PIPE_BOTHWAY(pipe_fds)
+    pid = getpid();
 
     sid = setsid();
     if (0 > sid) {
@@ -63,13 +63,15 @@ static choiced_status_t _child_process(int pipe_fds[])
         goto l_cleanup;
     }
 
-    STATUS_ASSIGN(status, _daemon_main(pipe_fds, pid));
+    openlog("choiced", 0, LOG_USER);
+
+    STATUS_ASSIGN(status, _daemon_main(pid));
 
 l_cleanup:
     return status;
 }
 
-choiced_status_t fork_me(int pipe_fds[])
+choiced_status_t fork_me(void)
 {
     STATUS_INIT(status);
     pid_t pid = 0;
@@ -79,9 +81,9 @@ choiced_status_t fork_me(int pipe_fds[])
         STATUS_LABEL(status, CHOICE_FORK_FAILED);
         goto l_cleanup;
     } else if (!pid) {
-        STATUS_ASSIGN(status, _child_process(pipe_fds));
+        STATUS_ASSIGN(status, _child_process());
     } else {
-        STATUS_ASSIGN(status, _father_process(pipe_fds, pid));
+        STATUS_ASSIGN(status, _father_process(pid));
     }
 
 l_cleanup:
@@ -91,19 +93,12 @@ l_cleanup:
 int main(int argc, char * argv[])
 {
     STATUS_INIT(status);
-    int pipe_fds[2] = {-1};
 
     if (7 == argc) {
         printf("I am a leet not a 1337\n");
     }
 
-    if (-1 == pipe(pipe_fds)) {
-        STATUS_LABEL(status, CHOICE_PIPE_FAILED);
-        goto l_cleanup;
-    }
+    STATUS_ASSIGN(status, fork_me());
 
-    STATUS_ASSIGN(status, fork_me(pipe_fds));
-
-l_cleanup:
     return status;
 }
