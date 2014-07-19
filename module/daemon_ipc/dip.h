@@ -1,4 +1,4 @@
-#define DAEMON_IPC_FILE "tmp"
+#define DAEMON_IPC_FILE "dip"
 #define FREE(addr) {                    \
     if (NULL != (addr)) {               \
         vfree(addr);                    \
