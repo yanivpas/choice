@@ -23,6 +23,8 @@ chc_status_t takeover(unsigned int fd, struct file **filp)
 		goto l_exit;
 	}
 
+    STATUS_LABEL(status, CHC_SUCCESS);
+
 l_exit:
 	return status;
 }
@@ -38,6 +40,8 @@ chc_status_t takeover_socket(unsigned int fd, struct socket **sock)
         retval = -1;
     }
     *sock = sock_from_file(filp, &retval);
+
+    STATUS_LABEL(status, CHC_SUCCESS);
 
     return status;
 }
