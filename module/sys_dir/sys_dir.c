@@ -33,9 +33,9 @@ chc_status_t syd_get_obj(struct file *file, struct syd_obj **obj)
 
     /* TODO: change comparison to some pointer. inode if possible */
     name = file->f_path.dentry->d_iname;
-    printk(KERN_INFO "orig: %s\n", name);
+    printk(KERN_INFO "looking for: %s\n", name);
     list_for_each_entry(position, &syd_entries, list) {
-        printk(KERN_INFO "cur: %s\n", position->obj->name);
+        printk(KERN_INFO "current: %s\n", position->obj->name);
         if (0 == strncmp(position->obj->name, name, SYD_MAX_NAME)) {
             local_obj = position->obj;
             break;
@@ -56,6 +56,7 @@ cleanup:
     return status;
 }
 
+/* TODO: check if this function is necessary */
 static int syd_show(struct seq_file *file, void *p)
 {
     STATUS_INIT(status);
@@ -84,13 +85,17 @@ static int syd_open(struct inode *inode, struct file *file)
     struct syd_obj *obj = NULL;
 
     STATUS_ASSIGN(status, syd_get_obj(file, &obj));
+    if (STATUS_IS_ERROR(status)) {
+        goto cleanup;
+    }
 
     STATUS_LABEL(status, CHC_SUCCESS);
-
+cleanup:
     if (STATUS_IS_ERROR(status)) {
         /* FIXME corrupt retval gracefully */
         return -1;
     }
+
     return single_open(file, syd_show, obj);
 }
 

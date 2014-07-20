@@ -31,6 +31,10 @@ prints(status, value##_STRING, __FILE__, __LINE__);     \
 #define CHC_COR_KSTRTOUL_STRING "kstrtoul"
 #define CHC_COR_OVERFLOW_STRING "overflow"
 
+#define CHC_CON_INVALID_STRING "invalid value"
+#define CHC_CON_VZALLOC_STRING "vzalloc"
+#define CHC_CON_SNPRINTF_STRING "snprintf"
+
 #define CHC_INIT_STRING "init value"
 #define CHC_UNKNOWN_STRING "unknown status value"
 
@@ -51,6 +55,10 @@ typedef enum {
     CHC_COR_COPY_FROM_USER,
     CHC_COR_KSTRTOUL,
     CHC_COR_OVERFLOW,
+
+    CHC_CON_INVALID,
+    CHC_CON_VZALLOC,
+    CHC_CON_SNPRINTF,
 
 	CHC_FTO_FGET,
 	CHC_FTO_CLOSE,

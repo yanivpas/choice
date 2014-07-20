@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../status.h"
 
 #define SYD_MAX_NAME (10)
@@ -13,7 +15,6 @@ struct syd_obj {
     struct syd_ops *ops;
 };
 
+chc_status_t syd_create(struct syd_obj *obj);
 int syd_init(void);
 void syd_exit(void);
-
-chc_status_t syd_create(struct syd_obj *obj);

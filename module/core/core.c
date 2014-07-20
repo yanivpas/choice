@@ -10,22 +10,20 @@
 #include "../status.h"
 #include "../streamer/streamer.h"
 #include "../sys_dir/sys_dir.h"
+#include "connection.h"
 #include "core.h"
 
+#define COR_NAME "core"
 #define COR_USTRING_SIZE (8)
 #define COR_FD_BASE (10)
 
-static struct syd_obj g_cor_syd = {
-    .context = NULL,
-    .name = COR_NAME,
-    .ops = NULL,
-};
+static struct syd_obj *g_cor_syd = NULL;
 
-struct connection {
-    unsigned int fd;
+struct cor_entry {
+    struct syd_obj *connection;
     struct list_head list;
 };
-static LIST_HEAD(connections_list);
+static LIST_HEAD(cor_list);
 
 chc_status_t cor_read(void *context)
 {
@@ -61,7 +59,34 @@ static chc_status_t cor_parse_fd(const char *ustring, size_t ustring_size, unsig
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
     if (STATUS_IS_SUCCESS(status)) {
-        *fd = (unsigned long) local_fd;
+        *fd = (unsigned int) local_fd;
+    }
+
+    return status;
+}
+
+static chc_status_t cor_add_connection(unsigned int fd)
+{
+    STATUS_INIT(status);
+    struct cor_entry *new_entry = NULL;
+    struct syd_obj *new_connection = NULL;
+
+    con_create(fd, &new_connection);
+
+    new_entry = (struct cor_entry *)vzalloc(sizeof(*new_entry));
+    if (NULL == new_entry) {
+        STATUS_LABEL(status, CHC_COR_VZALLOC);
+        goto cleanup;
+    }
+    new_entry->connection = new_connection;
+    list_add(&(new_entry->list), &cor_list);
+
+    STATUS_LABEL(status, CHC_SUCCESS);
+cleanup:
+    if (STATUS_IS_ERROR(status)) {
+        if (NULL != new_entry) {
+            vfree(new_entry);
+        }
     }
 
     return status;
@@ -70,49 +95,47 @@ cleanup:
 chc_status_t cor_write(void *context, const char *buffer, size_t buffer_size)
 {
     STATUS_INIT(status);
-    unsigned int parsed_fd = 0;
-    struct connection *new_connection = NULL;
+    unsigned int fd = 0;
 
-    /* TODO: takeover fd and create its own file */
-    STATUS_ASSIGN(status, cor_parse_fd(buffer, buffer_size, &parsed_fd));
+    /* TODO: takeover fd */
+    STATUS_ASSIGN(status, cor_parse_fd(buffer, buffer_size, &fd));
     if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
 
-    new_connection = (struct connection *)vzalloc(sizeof(*new_connection));
-    if (NULL == new_connection) {
-        STATUS_LABEL(status, CHC_COR_VZALLOC);
+    STATUS_ASSIGN(status, cor_add_connection(fd));
+    if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
-    new_connection->fd = parsed_fd;
-
-    list_add(&(new_connection->list), &connections_list);
 
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
-    if (STATUS_IS_ERROR(status)) {
-        if (NULL != new_connection) {
-            vfree(new_connection);
-        }
-    }
-
     return status;
 }
 
 int cor_init(void)
 {
     STATUS_INIT(status);
+    struct syd_ops *local_ops = NULL;
 
-    g_cor_syd.ops = (struct syd_ops *)vzalloc(sizeof(*g_cor_syd.ops));
-    if (NULL == g_cor_syd.ops) {
-        STATUS_LABEL(status, CHC_DIP_VZALLOC);
+    local_ops = (struct syd_ops *)vzalloc(sizeof(local_ops));
+    if (NULL == local_ops) {
+        STATUS_LABEL(status, CHC_COR_VZALLOC);
         goto cleanup;
     }
+    local_ops->read = cor_read;
+    local_ops->write = cor_write;
 
-    g_cor_syd.ops->read = cor_read;
-    g_cor_syd.ops->write = cor_write;
+    g_cor_syd = (struct syd_obj *)vzalloc(sizeof(*g_cor_syd));
+    if (NULL == g_cor_syd) {
+        STATUS_LABEL(status, CHC_COR_VZALLOC);
+        goto cleanup;
+    }
+    g_cor_syd->ops = local_ops;
+    g_cor_syd->name = COR_NAME;
+    g_cor_syd->context = NULL;
 
-    STATUS_ASSIGN(status, syd_create(&g_cor_syd));
+    STATUS_ASSIGN(status, syd_create(g_cor_syd));
     if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
@@ -124,13 +147,15 @@ cleanup:
 
 void cor_exit(void)
 {
-    struct connection *position = NULL;
-    struct connection *tmp = NULL;
+    struct cor_entry *position = NULL;
+    struct cor_entry *tmp = NULL;
 
-    list_for_each_entry_safe(position, tmp, &connections_list, list) {
+    list_for_each_entry_safe(position, tmp, &cor_list, list) {
         list_del(&(position->list));
+        con_destroy(position->connection);
         vfree(position);
     }
 
-    vfree(g_cor_syd.ops);
+    vfree(g_cor_syd->ops);
+    vfree(g_cor_syd);
 }
