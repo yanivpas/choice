@@ -42,6 +42,7 @@ prints(status, value##_STRING, __FILE__, __LINE__);     \
 #define CHC_FTO_CLOSE_STRING "close failed"
 
 #define CHC_DIP_VZALLOC_STRING "vzalloc"
+#define CHC_DIP_WRONG_BARKER_STRING "The barker in dip file is wrong you stupid asshole"
 
 typedef enum {
     CHC_SUCCESS = 0,
@@ -64,6 +65,7 @@ typedef enum {
 	CHC_FTO_CLOSE,
 
     CHC_DIP_VZALLOC,
+    CHC_DIP_WRONG_BARKER,
 
     CHC_INIT
 } chc_status_t;

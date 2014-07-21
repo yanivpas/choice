@@ -1,7 +1,18 @@
 #include <linux/vmalloc.h>
+#include <linux/string.h>
 #include "../sys_dir/sys_dir.h"
 #include "../status.h"
 #include "dip.h"
+
+#define DIP_BARKER "kombucha"
+
+static chc_status_t _check_barker(const char * buffer);
+static chc_status_t _read_ipc_file(void * context);
+static chc_status_t _write_ipc_file(
+        void *context,
+        const char *buffer,
+        size_t buffer_size);
+static chc_status_t _init_syd_ipc(void);
 
 static struct syd_obj g_syd_ipc = {
     .context = NULL,
@@ -9,25 +20,48 @@ static struct syd_obj g_syd_ipc = {
     .ops = NULL,
 };
 
-chc_status_t _read_ipc_file(void * context)
+static chc_status_t _check_barker(const char * buffer)
+{
+    STATUS_INIT(status);
+
+    if (strncmp(buffer, DIP_BARKER, sizeof(DIP_BARKER) / sizeof(char))) {
+        STATUS_LABEL(status, CHC_DIP_WRONG_BARKER);
+        goto l_cleanup;
+    }
+
+    STATUS_LABEL(status, CHC_SUCCESS);
+
+l_cleanup:
+    return status;
+}
+
+static chc_status_t _read_ipc_file(void * context)
 {
     STATUS_INIT(status);
     STATUS_LABEL(status, CHC_SUCCESS);
     return status;
 }
 
-chc_status_t _write_ipc_file(
+static chc_status_t _write_ipc_file(
         void *context,
         const char *buffer,
         size_t buffer_size)
 {
 
     STATUS_INIT(status);
+
+    STATUS_ASSIGN(status, _check_barker(buffer));
+    if (STATUS_IS_ERROR(status)) {
+        goto l_cleanup;
+    }
+
     STATUS_LABEL(status, CHC_SUCCESS);
+
+l_cleanup:
     return status;
 }
 
-chc_status_t _init_syd_ipc(void)
+static chc_status_t _init_syd_ipc(void)
 {
     STATUS_INIT(status);
 
