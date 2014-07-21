@@ -6,6 +6,9 @@
 #include "dctl.h"
 #include "kernel_ipc.h"
 
+#define DIP_BARKER "kombucha"
+#define DIP_BARKER_SIZE (sizeof(DIP_BARKER) / sizeof(char))
+
 bool is_choice_running(void)
 {
     struct stat buf = {0};
@@ -26,6 +29,12 @@ choiced_status_t write_pid(pid_t pid)
     dip_fd = open(KERNEL_IPC_FILE_PATH, O_WRONLY);
     if (-1 == dip_fd) {
         STATUS_LABEL(status, CHOICE_OPEN_FAILED);
+        goto l_cleanup;
+    }
+
+    if (DIP_BARKER_SIZE !=
+            write(dip_fd, (void *)DIP_BARKER, DIP_BARKER_SIZE)) {
+        STATUS_LABEL(status, CHOICE_WRITE_FAILED);
         goto l_cleanup;
     }
 
