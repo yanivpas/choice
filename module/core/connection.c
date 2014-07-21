@@ -4,7 +4,7 @@
 #include "../status.h"
 #include "../sys_dir/sys_dir.h"
 #include "core.h"
-#include "connection.h"
+#include "internal.h"
 
 chc_status_t con_read(void *context)
 {
@@ -44,13 +44,18 @@ cleanup:
     return status;
 }
 
+static struct syd_ops g_con_ops = {
+    .read = con_read,
+    .write = con_write,
+};
+
+/* TODO: don't malloc name - on the stack */
 chc_status_t con_create(unsigned int fd, struct syd_obj **obj)
 {
     STATUS_INIT(status);
     int snprintf_result = 0;
     char *name = NULL;
     struct con_context *context = NULL;
-    struct syd_ops *ops = NULL;
     struct syd_obj *local_obj = NULL;
 
     if (NULL == obj) {
@@ -70,30 +75,20 @@ chc_status_t con_create(unsigned int fd, struct syd_obj **obj)
         STATUS_LABEL(status, CHC_CON_VZALLOC);
         goto cleanup;
     }
+    /* TODO: validate null termination */
     snprintf_result = snprintf(name, COR_MAX_NAME, CON_PATTERN, fd);
     if (0 > snprintf_result) {
         STATUS_LABEL(status, CHC_CON_SNPRINTF);
         goto cleanup;
     }
 
-    ops = (struct syd_ops *)vzalloc(sizeof(*ops));
-    if (NULL == ops) {
-        STATUS_LABEL(status, CHC_CON_VZALLOC);
-        goto cleanup;
-    }
-    ops->read = con_read;
-    ops->write = con_write;
-
     local_obj = (struct syd_obj *)vzalloc(sizeof(*local_obj));
     if (NULL == local_obj) {
         STATUS_LABEL(status, CHC_CON_VZALLOC);
         goto cleanup;
     }
-    local_obj->ops = ops;
-    local_obj->name = name;
-    local_obj->context = context;
 
-    STATUS_ASSIGN(status, syd_create(local_obj));
+    STATUS_ASSIGN(status, syd_create(name, context, &g_con_ops));
     if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
@@ -111,9 +106,6 @@ cleanup:
         }
         if (NULL != name) {
             vfree(name);
-        }
-        if (NULL != ops) {
-            vfree(ops);
         }
     }
 

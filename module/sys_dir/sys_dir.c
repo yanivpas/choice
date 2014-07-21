@@ -8,12 +8,10 @@
 #include <linux/string.h>
 #include <asm/uaccess.h>
 
-#include "sys_dir.h"
 #include "../status.h"
 #include "../streamer/streamer.h"
-
-#define SYD_MAGIC (0x10)
-#define SYD_ROOT_PATH "choice"
+#include "sys_dir.h"
+#include "internal.h"
 
 /* TODO define golbal struct to hold data like this */
 static struct proc_dir_entry* syd_root;
@@ -95,7 +93,6 @@ cleanup:
         /* FIXME corrupt retval gracefully */
         return -1;
     }
-
     return single_open(file, syd_show, obj);
 }
 
@@ -132,11 +129,68 @@ static const struct file_operations syd_fops = {
     .release = single_release,
 };
 
-chc_status_t syd_create(struct syd_obj *obj)
+chc_status_t syd_obj_destroy(struct syd_obj *obj)
 {
     STATUS_INIT(status);
-    struct syd_entry *new_entry = NULL;
+
+    if (NULL == obj) {
+        STATUS_LABEL(status, CHC_SYD_INVALID);
+        goto cleanup;
+    }
+
+    vfree(obj);
+
+    STATUS_LABEL(status, CHC_SUCCESS);
+cleanup:
+    return status;
+}
+
+chc_status_t syd_obj_create(char *name, void *context,
+                            struct syd_ops *ops, struct syd_obj **obj)
+{
+    STATUS_INIT(status);
+    struct syd_obj *local_obj = NULL;
+
+    if (NULL == obj) {
+        STATUS_LABEL(status, CHC_SYD_INVALID);
+        goto cleanup;
+    }
+
+    local_obj = (struct syd_obj *)vzalloc(sizeof(*local_obj));
+    if (NULL == local_obj) {
+        STATUS_LABEL(status, CHC_SYD_VZALLOC);
+        goto cleanup;
+    }
+
+    STATUS_LABEL(status, CHC_SUCCESS);
+cleanup:
+    if (STATUS_IS_SUCCESS(status)) {
+        *obj = local_obj;
+    } else {
+        if (NULL != local_obj) {
+            vfree(local_obj);
+        }
+    }
+    return status;
+}
+
+chc_status_t syd_create(char *name, void *context, struct syd_ops *ops)
+{
+    STATUS_INIT(status);
+    struct syd_obj *obj = NULL;
+    struct syd_entry *entry = NULL;
     struct proc_dir_entry *pid_entry;
+
+    if ((NULL == name) || (NULL == ops) ||
+        (NULL == ops->read) || (NULL == ops->write)) {
+        STATUS_LABEL(status, CHC_SYD_INVALID);
+        goto cleanup;
+    }
+
+    STATUS_ASSIGN(status, syd_obj_create(name, context, ops, &obj));
+    if (STATUS_IS_ERROR(status)) {
+        goto cleanup;
+    }
 
     pid_entry = proc_create_data(
         obj->name,
@@ -149,16 +203,21 @@ chc_status_t syd_create(struct syd_obj *obj)
         goto cleanup;
     }
 
-    new_entry = (struct syd_entry *)vzalloc(sizeof(*new_entry));
-    if (NULL == new_entry) {
+    entry = (struct syd_entry *)vzalloc(sizeof(*entry));
+    if (NULL == entry) {
         STATUS_LABEL(status, CHC_SYD_VZALLOC);
         goto cleanup;
     }
-    new_entry->obj = obj;
-    list_add(&(new_entry->list), &syd_entries);
+    entry->obj = obj;
+    list_add(&(entry->list), &syd_entries);
 
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
+    if (STATUS_IS_ERROR(status)) {
+        if (NULL == obj) {
+            (void)syd_obj_destroy(obj);
+        }
+    }
     return status;
 }
 
@@ -188,6 +247,7 @@ void syd_exit(void)
 
     list_for_each_entry_safe(position, tmp, &syd_entries, list) {
         list_del(&(position->list));
+        (void)syd_obj_destroy(position->obj);
         vfree(position);
     }
 

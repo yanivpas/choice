@@ -10,14 +10,8 @@
 #include "../status.h"
 #include "../streamer/streamer.h"
 #include "../sys_dir/sys_dir.h"
-#include "connection.h"
 #include "core.h"
-
-#define COR_NAME "core"
-#define COR_USTRING_SIZE (8)
-#define COR_FD_BASE (10)
-
-static struct syd_obj *g_cor_syd = NULL;
+#include "internal.h"
 
 struct cor_entry {
     struct syd_obj *connection;
@@ -68,27 +62,33 @@ cleanup:
 static chc_status_t cor_add_connection(unsigned int fd)
 {
     STATUS_INIT(status);
-    struct cor_entry *new_entry = NULL;
-    struct syd_obj *new_connection = NULL;
+    struct cor_entry *entry = NULL;
+    struct syd_obj *connection = NULL;
 
-    con_create(fd, &new_connection);
+    STATUS_ASSIGN(status, con_create(fd, &connection));
+    if (STATUS_IS_ERROR(status)) {
+        goto cleanup;
+    }
 
-    new_entry = (struct cor_entry *)vzalloc(sizeof(*new_entry));
-    if (NULL == new_entry) {
+    entry = (struct cor_entry *)vzalloc(sizeof(*entry));
+    if (NULL == entry) {
         STATUS_LABEL(status, CHC_COR_VZALLOC);
         goto cleanup;
     }
-    new_entry->connection = new_connection;
-    list_add(&(new_entry->list), &cor_list);
+    entry->connection = connection;
 
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
-    if (STATUS_IS_ERROR(status)) {
-        if (NULL != new_entry) {
-            vfree(new_entry);
+    if (STATUS_IS_SUCCESS(status)) {
+        list_add(&(entry->list), &cor_list);
+    } else {
+        if (NULL != connection) {
+            (void)con_destroy(connection);
+        }
+        if (NULL != entry) {
+            vfree(entry);
         }
     }
-
     return status;
 }
 
@@ -113,29 +113,16 @@ cleanup:
     return status;
 }
 
+static struct syd_ops g_cor_ops = {
+    .read = cor_read,
+    .write = cor_write,
+};
+
 int cor_init(void)
 {
     STATUS_INIT(status);
-    struct syd_ops *local_ops = NULL;
 
-    local_ops = (struct syd_ops *)vzalloc(sizeof(local_ops));
-    if (NULL == local_ops) {
-        STATUS_LABEL(status, CHC_COR_VZALLOC);
-        goto cleanup;
-    }
-    local_ops->read = cor_read;
-    local_ops->write = cor_write;
-
-    g_cor_syd = (struct syd_obj *)vzalloc(sizeof(*g_cor_syd));
-    if (NULL == g_cor_syd) {
-        STATUS_LABEL(status, CHC_COR_VZALLOC);
-        goto cleanup;
-    }
-    g_cor_syd->ops = local_ops;
-    g_cor_syd->name = COR_NAME;
-    g_cor_syd->context = NULL;
-
-    STATUS_ASSIGN(status, syd_create(g_cor_syd));
+    STATUS_ASSIGN(status, syd_create(COR_NAME, NULL, &g_cor_ops));
     if (STATUS_IS_ERROR(status)) {
         goto cleanup;
     }
@@ -155,7 +142,4 @@ void cor_exit(void)
         con_destroy(position->connection);
         vfree(position);
     }
-
-    vfree(g_cor_syd->ops);
-    vfree(g_cor_syd);
 }
