@@ -5,13 +5,11 @@
 #include "dip.h"
 
 #define DIP_BARKER "kombucha"
+#define DIP_BARKER_SIZE (sizeof(DIP_BARKER) / sizeof(char))
 
 static chc_status_t _check_barker(const char * buffer);
 static chc_status_t _read_ipc_file(void * context);
-static chc_status_t _write_ipc_file(
-        void *context,
-        const char *buffer,
-        size_t buffer_size);
+static chc_status_t _write_ipc_file(void *context, const char *buffer, size_t buffer_size);
 static chc_status_t _init_syd_ipc(void);
 
 static struct syd_obj g_syd_ipc = {
@@ -24,7 +22,7 @@ static chc_status_t _check_barker(const char * buffer)
 {
     STATUS_INIT(status);
 
-    if (strncmp(buffer, DIP_BARKER, sizeof(DIP_BARKER) / sizeof(char))) {
+    if (strncmp(buffer, DIP_BARKER, DIP_BARKER_SIZE)) {
         STATUS_LABEL(status, CHC_DIP_WRONG_BARKER);
         goto l_cleanup;
     }
@@ -52,6 +50,9 @@ static chc_status_t _write_ipc_file(
 
     STATUS_ASSIGN(status, _check_barker(buffer));
     if (STATUS_IS_ERROR(status)) {
+        /* I don't to fail the function because the user won't be able to write to the file,
+         * but i still want to stop the function's flow */
+        STATUS_LABEL(status, CHC_SUCCESS);
         goto l_cleanup;
     }
 
@@ -68,7 +69,7 @@ static chc_status_t _init_syd_ipc(void)
     g_syd_ipc.ops = (struct syd_ops *)vzalloc(sizeof(*g_syd_ipc.ops));
     if (NULL == g_syd_ipc.ops) {
         STATUS_LABEL(status, CHC_DIP_VZALLOC);
-        goto l_exit;
+        goto l_cleanup;
     }
 
     g_syd_ipc.ops->read = _read_ipc_file;
@@ -76,7 +77,7 @@ static chc_status_t _init_syd_ipc(void)
 
     STATUS_LABEL(status, CHC_SUCCESS);
 
-l_exit:
+l_cleanup:
     return status;
 }
 
@@ -86,17 +87,17 @@ int dip_init(void)
 
     STATUS_ASSIGN(status, _init_syd_ipc());
     if (STATUS_IS_ERROR(status)) {
-        goto l_exit;
+        goto l_cleanup;
     }
 
     STATUS_ASSIGN(status, syd_create(&g_syd_ipc));
     if (STATUS_IS_ERROR(status)) {
-        goto l_exit;
+        goto l_cleanup;
     }
 
     STATUS_LABEL(status, CHC_SUCCESS);
 
-l_exit:
+l_cleanup:
     return (int) status;
 }
 
