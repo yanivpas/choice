@@ -30,6 +30,9 @@ static choiced_status_t _daemon_main(pid_t pid)
     PRINT("I am alive!!!");
 
     STATUS_ASSIGN(status, write_pid(pid));
+    if (STATUS_IS_ERROR(status)) {
+        goto l_cleanup;
+    }
 
     _wait();
 
