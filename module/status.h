@@ -21,6 +21,7 @@ prints(status, value##_STRING, __FILE__, __LINE__);     \
 
 #define CHC_SUCCESS_STRING "success"
 
+#define CHC_SYD_INVALID_STRING "invalid value"
 #define CHC_SYD_PROC_MKDIR_STRING "proc_mkdir"
 #define CHC_SYD_VZALLOC_STRING "vzalloc"
 #define CHC_SYD_PROC_CREATE_DATA_STRING "proc_create_data"
@@ -47,6 +48,7 @@ prints(status, value##_STRING, __FILE__, __LINE__);     \
 typedef enum {
     CHC_SUCCESS = 0,
 
+    CHC_SYD_INVALID,
     CHC_SYD_PROC_MKDIR,
     CHC_SYD_VZALLOC,
     CHC_SYD_PROC_CREATE_DATA,

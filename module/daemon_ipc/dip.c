@@ -90,7 +90,7 @@ int dip_init(void)
         goto l_cleanup;
     }
 
-    STATUS_ASSIGN(status, syd_create(&g_syd_ipc));
+    STATUS_ASSIGN(status, syd_create(g_syd_ipc.name, g_syd_ipc.context, g_syd_ipc.ops));
     if (STATUS_IS_ERROR(status)) {
         goto l_cleanup;
     }

@@ -121,7 +121,6 @@ chc_status_t con_destroy(struct syd_obj *obj)
         goto cleanup;
     }
 
-    vfree(obj->ops);
     vfree(obj->name);
     vfree(obj->context);
     vfree(obj);
