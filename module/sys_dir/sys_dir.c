@@ -162,6 +162,10 @@ chc_status_t syd_obj_create(char *name, void *context,
         goto cleanup;
     }
 
+    local_obj->name = name;
+    local_obj->context = context;
+    local_obj->ops = ops;
+
     STATUS_LABEL(status, CHC_SUCCESS);
 cleanup:
     if (STATUS_IS_SUCCESS(status)) {
